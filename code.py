@@ -1,4 +1,3 @@
-
 class point:
     def __init__(self, x, y):
         self.x = int(x)
@@ -31,7 +30,7 @@ class point:
         return self.x == other.x and self.y == other.y
 
 
-class Rectange:
+class Rectangle:
     def __init__(self, p1, p2):
         self.ll = min(p1, p2)
         self.ru = max(p1, p2)
@@ -39,17 +38,17 @@ class Rectange:
     def contains_point(self, p):
         return (self.ll.x <= p.x <= self.ru.x) and (self.ll.y <= p.y <= self.ru.y)
 
-    def contains_rectange(self, rect):
+    def contains_Rectangle(self, rect):
         return self.ll.x <= rect.ll.x and self.ll.y <= rect.ll.y and self.ru.x >= rect.ru.x and self.ru.y >= rect.ru.y
 
-    def updated_rectange(self, p):
-        return Rectange(point(min(self.ll.x, p.x), min(self.ll.y, p.y)), point(max(self.ru.x, p.x), max(self.ru.y, p.y)))
+    def updated_Rectangle(self, p):
+        return Rectangle(point(min(self.ll.x, p.x), min(self.ll.y, p.y)), point(max(self.ru.x, p.x), max(self.ru.y, p.y)))
 
     def area(self):
         return (self.ru.x - self.ll.x) * (self.ru.y - self.ll.y)
 
     def distance(self, p):
-        return abs(self.area() - self.updated_rectange(p).area())
+        return abs(self.area() - self.updated_Rectangle(p).area())
 
     def overlap(self, other):
         return not (self.ll.x > other.ru.x or self.ru.x < other.ll.x or self.ru.y < other.ll.y or self.ll.y > other.ru.y)
@@ -68,7 +67,7 @@ class Node:
     def __init__(self, is_leaf=False, children=[],) -> None:
         self.is_leaf = is_leaf
         self.children = children
-        self.rectangle = Rectange(
+        self.rectangle = Rectangle(
             point(Node.maximum, Node.maximum), point(Node.minimum, Node.minimum))
         self.update_rectangle()
 
@@ -115,7 +114,7 @@ class Node:
 
             return True, new_node
 
-    def inter_insert(self, node, closest_insert=False):
+    def inter_insert(self, node):
         assert not self.is_leaf, "Cannot insert into leaf node"
         if len(self.children) < self.max_children:
             self.children.append(node)
@@ -157,8 +156,15 @@ class Node:
     def __repr__(self):
         return "N[\n  rectangle: {}\n  children: {}\n  leaf: {}\n]".format(repr(self.rectangle), repr(self.children), self.is_leaf)
 
+    def print_depth(self, depth=0):
+        if self.is_leaf:
+            print(depth, end=' ')
+        else:
+            for child in self.children:
+                child.print_depth(depth+1)
 
-class RTree:
+
+class Rtree:
 
     def __init__(self) -> None:
         self.root = Node(is_leaf=True)
@@ -168,7 +174,10 @@ class RTree:
             return node.leaf_insert(point)
         for child in node.children:
             if child.contains_point(point):
-                return self.recursive_insert(child, point)
+                is_split, new_node = self.recursive_insert(child, point)
+                if new_node is not None:
+                    return is_split, Node(is_leaf=False, children=[new_node])
+                return is_split, new_node
         closest_rect = None
         closest_distance = True
         closest_distance = float('inf')
@@ -200,13 +209,16 @@ class RTree:
     def __repr__(self):
         return repr(self.root)
 
+    def print_depth(self):
+        return self.root.print_depth()
+
 
 if __name__ == '__main__':
     import sys
     import os
     assert len(sys.argv) == 2, "Usage: python3 rtree.py <input_file>"
     assert os.path.isfile(sys.argv[1]), "{} not found".format(sys.argv[1])
-    tree = RTree()
+    tree = Rtree()
     with open(sys.argv[1]) as f:
         line = f.readline()
         while line:
@@ -219,7 +231,8 @@ if __name__ == '__main__':
             elif line[0] == 'RANGE':
                 points = line[1].lstrip('(').rstrip(')').split(',')
                 print(tree.range(
-                    Rectange(point(points[0], points[1]), point(points[2], points[3]))))
+                    Rectangle(point(points[0], points[1]), point(points[2], points[3]))))
                 # print("tree:\n", tree)
             line = f.readline()
-    print(tree)
+
+tree.print_depth()
