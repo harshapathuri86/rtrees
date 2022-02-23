@@ -60,7 +60,7 @@ class Rectangle:
 class Node:
 
     max_children = 2
-    max_points = 4
+    max_points = 12
     maximum = 1e9+1
     minimum = -1e9-1
 
@@ -234,5 +234,3 @@ if __name__ == '__main__':
                     Rectangle(point(points[0], points[1]), point(points[2], points[3]))))
                 # print("tree:\n", tree)
             line = f.readline()
-
-tree.print_depth()
