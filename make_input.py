@@ -58,7 +58,10 @@ for _ in range(fsize):
     y = np.random.randint(-max_value, max_value)
     p = point(x, y)
     f.write("FIND {}\n".format(p))
-    f2.write("{}\n".format(p in points))
+    if (p in points):
+        f2.write("YES\n")
+    else:
+        f2.write("NO\n")
 
 
 def inside_rect(point, left_bottom, right_top):
@@ -81,7 +84,8 @@ for _ in range(rsize):
     for p in points:
         if inside_rect(p, mn, mx):
             insiders.append(p)
-    f2.write(repr(insiders))
+    # f2.write(repr(insiders))
+    f2.write(str(len(insiders)))
     f2.write("\n")
 
 f.close()

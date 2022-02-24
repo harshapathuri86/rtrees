@@ -1,4 +1,4 @@
-class point:
+class Point:
     def __init__(self, x, y):
         self.x = int(x)
         self.y = int(y)
@@ -32,23 +32,23 @@ class point:
 
 class Rectangle:
     def __init__(self, p1, p2):
-        self.ll = min(p1, p2)
-        self.ru = max(p1, p2)
+        self.ll = p1
+        self.ru = p2
 
     def contains_point(self, p):
         return (self.ll.x <= p.x <= self.ru.x) and (self.ll.y <= p.y <= self.ru.y)
 
-    def contains_Rectangle(self, rect):
+    def contains_rectangle(self, rect):
         return self.ll.x <= rect.ll.x and self.ll.y <= rect.ll.y and self.ru.x >= rect.ru.x and self.ru.y >= rect.ru.y
 
-    def updated_Rectangle(self, p):
-        return Rectangle(point(min(self.ll.x, p.x), min(self.ll.y, p.y)), point(max(self.ru.x, p.x), max(self.ru.y, p.y)))
+    def update_rectangle(self, p):
+        return Rectangle(Point(min(self.ll.x, p.x), min(self.ll.y, p.y)), Point(max(self.ru.x, p.x), max(self.ru.y, p.y)))
 
     def area(self):
         return (self.ru.x - self.ll.x) * (self.ru.y - self.ll.y)
 
     def distance(self, p):
-        return abs(self.area() - self.updated_Rectangle(p).area())
+        return abs(self.area() - self.update_rectangle(p).area())
 
     def overlap(self, other):
         return not (self.ll.x > other.ru.x or self.ru.x < other.ll.x or self.ru.y < other.ll.y or self.ll.y > other.ru.y)
@@ -68,12 +68,12 @@ class Node:
         self.is_leaf = is_leaf
         self.children = children
         self.rectangle = Rectangle(
-            point(Node.maximum, Node.maximum), point(Node.minimum, Node.minimum))
+            Point(Node.maximum, Node.maximum), Point(Node.minimum, Node.minimum))
         self.update_rectangle()
 
     def update_rectangle(self):
-        self.rectangle.ll = point(Node.maximum, Node.maximum)
-        self.rectangle.ru = point(Node.minimum, Node.minimum)
+        self.rectangle.ll = Point(Node.maximum, Node.maximum)
+        self.rectangle.ru = Point(Node.minimum, Node.minimum)
         if self.is_leaf:
             for child in self.children:
                 self.rectangle.ll.x = min(
@@ -96,7 +96,7 @@ class Node:
                     self.rectangle.ru.y, child.rectangle.ru.y)
 
     def leaf_insert(self, point):
-        assert self.is_leaf, "Cannot insert into non-leaf node"
+        assert self.is_leaf, "Cannot insert point into non-leaf node"
         # return is_split, new_node
         if len(self.children) < self.max_points:
             self.children.append(point)
@@ -114,8 +114,8 @@ class Node:
 
             return True, new_node
 
-    def inter_insert(self, node):
-        assert not self.is_leaf, "Cannot insert into leaf node"
+    def intermediate_insert(self, node):
+        assert not self.is_leaf, "Cannot insert node into leaf node"
         if len(self.children) < self.max_children:
             self.children.append(node)
             self.update_rectangle()
@@ -138,14 +138,19 @@ class Node:
         return is_found
 
     def range(self, rect):
+        # code to list the points
+        # if self.is_leaf:
+        #     return [p for p in self.children if rect.contains_point(p)]
+        # arr = []
+        # for child in self.children:
+        #     if child.rectangle.overlap(rect):
+        #         arr.extend(child.range(rect))
+        # return arr
         if self.is_leaf:
-            # print("reached leaf", rect, "children: ", self.children)
-            return [p for p in self.children if rect.contains_point(p)]
-        arr = []
+            return len([p for p in self.children if rect.contains_point(p)])
         for child in self.children:
-            if child.rectangle.overlap(rect):
-                arr.extend(child.range(rect))
-        return arr
+            import numpy as np
+            return int(np.sum([child.range(rect) for child in self.children if child.rectangle.overlap(rect)]))
 
     def contains_point(self, p):
         return self.rectangle.contains_point(p)
@@ -190,21 +195,21 @@ class Rtree:
             closest_rect, point)
         closest_rect.update_rectangle()
         if is_split:
-            return node.inter_insert(new_node)
+            return node.intermediate_insert(new_node)
         return False, None
 
-    def update_root(self, is_split, node):
+    def insert(self, p):
+        is_split, node = self.recursive_insert(self.root, p)
         if is_split:
             self.root = Node(is_leaf=False, children=[self.root, node])
 
-    def insert(self, p):
-        self.update_root(*self.recursive_insert(self.root, p))
-
     def find(self, p):
-        return self.root.find(p)
+        if self.root.find(p):
+            return "YES"
+        return "NO"
 
     def range(self, rect):
-        return sorted(self.root.range(rect))
+        return self.root.range(rect)
 
     def __repr__(self):
         return repr(self.root)
@@ -224,13 +229,12 @@ if __name__ == '__main__':
         while line:
             line = line.strip().split(' ')
             if line[0] == 'INSERT':
-                tree.insert(point(*line[1].lstrip('(').rstrip(')').split(',')))
+                tree.insert(Point(*line[1].lstrip('(').rstrip(')').split(',')))
             elif line[0] == 'FIND':
                 print(
-                    tree.find(point(*line[1].lstrip('(').rstrip(')').split(','))))
+                    tree.find(Point(*line[1].lstrip('(').rstrip(')').split(','))))
             elif line[0] == 'RANGE':
                 points = line[1].lstrip('(').rstrip(')').split(',')
                 print(tree.range(
-                    Rectangle(point(points[0], points[1]), point(points[2], points[3]))))
-                # print("tree:\n", tree)
+                    Rectangle(Point(points[0], points[1]), Point(points[2], points[3]))))
             line = f.readline()
