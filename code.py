@@ -29,6 +29,9 @@ class Point:
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
+    def distance(self, other):
+        return (abs(self.x - other.x)**2 + abs(self.y - other.y)**2)**0.5
+
 
 class Rectangle:
     def __init__(self, p1, p2):
@@ -42,6 +45,11 @@ class Rectangle:
         return self.ll.x <= rect.ll.x and self.ll.y <= rect.ll.y and self.ru.x >= rect.ru.x and self.ru.y >= rect.ru.y
 
     def update_rectangle(self, p):
+        if isinstance(p, Rectangle):
+            rect = self.update_rectangle(p.ll)
+            rect = rect.update_rectangle(p.ru)
+            return rect
+
         return Rectangle(Point(min(self.ll.x, p.x), min(self.ll.y, p.y)), Point(max(self.ru.x, p.x), max(self.ru.y, p.y)))
 
     def area(self):
@@ -49,6 +57,12 @@ class Rectangle:
 
     def distance(self, p):
         return abs(self.area() - self.update_rectangle(p).area())
+
+    def inter_distance(self, other):
+        rect = Rectangle(self.ll, self.ru)
+        rect = rect.update_rectangle(other.ll)
+        rect = rect.update_rectangle(other.ru)
+        return rect.area() - self.area() - other.area()
 
     def overlap(self, other):
         return not (self.ll.x > other.ru.x or self.ru.x < other.ll.x or self.ru.y < other.ll.y or self.ll.y > other.ru.y)
@@ -59,7 +73,7 @@ class Rectangle:
 
 class Node:
 
-    max_children = 2
+    max_children = 12
     max_points = 12
     maximum = 1e9+1
     minimum = -1e9-1
@@ -95,6 +109,17 @@ class Node:
                 self.rectangle.ru.y = max(
                     self.rectangle.ru.y, child.rectangle.ru.y)
 
+    def farthest_children(self):
+        max_distance = float("-inf")
+        max_children = []
+        for i in range(len(self.children)):
+            for j in range(i+1, len(self.children)):
+                distance = self.children[i].distance(self.children[j])
+                if distance > max_distance:
+                    max_distance = distance
+                    max_children = [self.children[i], self.children[j]]
+        return max_children
+
     def leaf_insert(self, point):
         assert self.is_leaf, "Cannot insert point into non-leaf node"
         # return is_split, new_node
@@ -104,13 +129,54 @@ class Node:
             self.update_rectangle()
             return False, None
         else:
+            # *************
+            # self.children.append(point)
+            # # print("Init", len(self.children))
+            # import math
+            # split_pos = math.ceil(len(self.children)/2)
+            # new_node_children = self.children[split_pos:]
+            # self.children = self.children[:split_pos]
+            # self.update_rectangle()
+            # new_node = Node(is_leaf=True, children=new_node_children)
+            # # print("split", len(self.children), len(new_node_children))
+            # return True, new_node
+            # *********
             self.children.append(point)
-            import math
-            split_pos = math.ceil(len(self.children)/2)
-            new_node_children = self.children[split_pos:]
-            self.children = self.children[:split_pos]
+            e1, e2 = self.farthest_children()
+            e1_rect = Rectangle(e1, e1)
+            e2_rect = Rectangle(e2, e2)
+            e1_node = [e1]
+            e2_node = [e2]
+            for child in self.children:
+                if child == e1 or child == e2:
+                    continue
+                e1_dist = e1.distance(child)
+                e2_dist = e2.distance(child)
+                if e1_dist < e2_dist:
+                    e1_node.append(child)
+                    e1_rect = e1_rect.update_rectangle(child)
+                elif e1_dist > e2_dist:
+                    e2_node.append(child)
+                    e2_rect = e2_rect.update_rectangle(child)
+                else:
+                    e1_area = e1_rect.update_rectangle(child).area()
+                    e2_area = e2_rect.update_rectangle(child).area()
+                    if (e1_area) < (e2_area):
+                        e1_node.append(child)
+                        e1_rect = e1_rect.update_rectangle(child)
+                    elif (e1_area) > (e2_area):
+                        e2_node.append(child)
+                        e2_rect = e2_rect.update_rectangle(child)
+                    else:
+                        if len(e1_node) <= len(e2_node):
+                            e1_node.append(child)
+                            e1_rect = e1_rect.update_rectangle(child)
+                        else:
+                            e2_node.append(child)
+                            e2_rect = e2_rect.update_rectangle(child)
+            self.children = e1_node
             self.update_rectangle()
-            new_node = Node(is_leaf=True, children=new_node_children)
+            new_node = Node(is_leaf=True, children=e2_node)
 
             return True, new_node
 
@@ -121,12 +187,55 @@ class Node:
             self.update_rectangle()
             return False, None
         self.children.append(node)
-        import math
-        split_pos = math.ceil(len(self.children)/2)
-        new_node_children = self.children[split_pos:]
-        self.children = self.children[:split_pos]
-        self.update_rectangle()
-        new_node = Node(is_leaf=False, children=new_node_children)
+        # *********
+        # import math
+        # split_pos = math.ceil(len(self.children)/2)
+        # new_node_children = self.children[split_pos:]
+        # self.children = self.children[:split_pos]
+        # self.update_rectangle()
+        # # new_node = Node(is_leaf=False, children=new_node_children)
+        # new_node = Node(is_leaf=False, children=new_node_children)
+        # return True, new_node
+        # *********
+        e1, e2 = self.farthest_children()
+        e1_node = [e1]
+        e2_node = [e2]
+        e1_rect = Rectangle(e1.rectangle.ll, e1.rectangle.ru)
+        e2_rect = Rectangle(e2.rectangle.ll, e2.rectangle.ru)
+
+        for child in self.children:
+            if child == e1 or child == e2:
+                continue
+            e1_area = e1_rect.area()
+            e2_area = e2_rect.area()
+            e1_new_area = e1_rect.update_rectangle(
+                child.rectangle).area() - e1_area
+            e2_new_area = e1_rect.update_rectangle(
+                child.rectangle).area() - e2_area
+            if e1_new_area == e2_new_area:
+                if ((e1_new_area+e1_area) == (e2_new_area+e2_area)):
+                    if len(e1_node) <= len(e2_node):
+                        e1_node.append(child)
+                        e1_rect = e1_rect.update_rectangle(child.rectangle)
+                    else:
+                        e2_node.append(child)
+                        e2_rect = e2_rect.update_rectangle(child.rectangle)
+                else:
+                    if ((e1_new_area+e1_area) < (e2_new_area+e2_area)):
+                        e1_node.append(child)
+                        e1_rect = e1_rect.update_rectangle(child.rectangle)
+                    else:
+                        e2_node.append(child)
+                        e2_rect = e2_rect.update_rectangle(child.rectangle)
+            else:
+                if e1_area < e2_area:
+                    e1_node.append(child)
+                    e1_rect = e1_rect.update_rectangle(child.rectangle)
+                else:
+                    e2_node.append(child)
+                    e2_rect = e2_rect.update_rectangle(child.rectangle)
+        self.children = e1_node
+        new_node = Node(is_leaf=False, children=e2_node)
         return True, new_node
 
     def find(self, p):
@@ -138,14 +247,6 @@ class Node:
         return is_found
 
     def range(self, rect):
-        # code to list the points
-        # if self.is_leaf:
-        #     return [p for p in self.children if rect.contains_point(p)]
-        # arr = []
-        # for child in self.children:
-        #     if child.rectangle.overlap(rect):
-        #         arr.extend(child.range(rect))
-        # return arr
         if self.is_leaf:
             return len([p for p in self.children if rect.contains_point(p)])
         for child in self.children:
@@ -156,17 +257,12 @@ class Node:
         return self.rectangle.contains_point(p)
 
     def distance(self, p):
+        if isinstance(p, Node):
+            return self.rectangle.inter_distance(p.rectangle)
         return self.rectangle.distance(p)
 
     def __repr__(self):
         return "N[\n  rectangle: {}\n  children: {}\n  leaf: {}\n]".format(repr(self.rectangle), repr(self.children), self.is_leaf)
-
-    def print_depth(self, depth=0):
-        if self.is_leaf:
-            print(depth, end=' ')
-        else:
-            for child in self.children:
-                child.print_depth(depth+1)
 
 
 class Rtree:
@@ -180,8 +276,8 @@ class Rtree:
         for child in node.children:
             if child.contains_point(point):
                 is_split, new_node = self.recursive_insert(child, point)
-                if new_node is not None:
-                    return is_split, Node(is_leaf=False, children=[new_node])
+                if is_split:
+                    return node.intermediate_insert(new_node)
                 return is_split, new_node
         closest_rect = None
         closest_distance = True
