@@ -1,23 +1,23 @@
 # RTrees
 
-> Harsha Pathuri 2019101086
+---
 
-### Code Execution
+## Code Execution
 
 - Usage: `python3 code.py <input_file>`
 
 ## Implementation Details
 
-### Classes:
+### Classes
 
 - `Point`: Implements `(x,y)` points which are inserted into the RTree.
 - `Rectangle`: Implements the mbb of nodes in the RTree.
 - `Node`: Implements the nodes in the RTree.
 - `RTree`: Implements the RTree.
 
-### `Node`:
+### `Node`
 
-**Functions**
+#### Functions
 
 - `update_rectangle` updates the mbb of the node.
 - `leaf_insert`
@@ -31,21 +31,21 @@
 - `range`
   - Returns count of points in the subtree of the current node which fall inside the given `rectangle`
 
-**Variables**
+#### Variables
 
 - `max_children` : 2, maximum number of children of an inner node.
-- `max_points` : 12, maximum number of points that can be inserted into a leaf node. 
+- `max_points` : 12, maximum number of points that can be inserted into a leaf node.
 - `rectange` : `mbb` of the node
 - `children` : List of child nodes.
 - `is_leaf` :  True if the node is a leaf node. False for the inner node.
 
 ### `Rtree`
 
-**Functions**
+#### Functions
 
 - `recursive_insert`
   - Inserts the given `point` into the tree recursively. If a split happens, returns the newly created node to the parent node.
-  - If point does not fall into any `mbb`, it is inserted into the closest rectangle with change in area as the distance metric. 
+  - If point does not fall into any `mbb`, it is inserted into the closest rectangle with change in area as the distance metric.
 - `insert`
   - Inserts the given point into the tree using the `recursive_insert` function and creates a new `root` if required.
 - `find`
@@ -53,6 +53,6 @@
 - `range`
   - Calls `range` for the root node to return the points in the given `rectangle`
 
-**Variables**
+#### Variables
 
 - `root` : Root node of the Rtree.
